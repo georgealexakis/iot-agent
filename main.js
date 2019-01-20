@@ -500,7 +500,7 @@ var ChatService = /** @class */ (function () {
     };
     ChatService.prototype.lightHandling = function (input) {
         var output = input.replace('$light$', '');
-        if (input.includes('$turn-on$') || input.includes('$turn-off$')) {
+        if (input.includes('$room')) {
             var roomNumber = '';
             for (var i = input.indexOf('$room') + 5; i < input.length; i++) {
                 if (input[i] !== '$') {
@@ -515,7 +515,7 @@ var ChatService = /** @class */ (function () {
             var out = output.replace(replace, roomName);
             this.data.setLightSate('room' + roomNumber, out, this.conversation);
         }
-        else if (input.includes('$turn-on-all$') || input.includes('$turn-off-all$')) {
+        else if (input.includes('$all-rooms$')) {
             var replace = '$all-rooms$';
             var out = output.replace(replace, 'house');
             this.data.setAllLightSate(out, this.conversation);
@@ -698,15 +698,15 @@ var DataService = /** @class */ (function () {
         var state;
         var message;
         var replace;
-        if (input.includes('$turn-on-all$')) {
+        if (input.includes('$turn-on$')) {
             state = 1;
             message = 'on';
-            replace = '$turn-on-all$';
+            replace = '$turn-on$';
         }
         else {
             state = 0;
             message = 'off';
-            replace = '$turn-off-all$';
+            replace = '$turn-off$';
         }
         for (var i = 1; i <= 6; i++) {
             this.subscription = this.mqttService.publish('lightState', i + '' + state).subscribe(function () { });
