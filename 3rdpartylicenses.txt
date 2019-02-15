@@ -474,6 +474,15 @@ MIT
 @angular/common
 MIT
 
+@angular/platform-browser
+MIT
+
+@angular/router
+MIT
+
+@angular/forms
+MIT
+
 @angular/fire
 MIT
 
@@ -687,15 +696,6 @@ Apache-2.0
 
 
 firebase/auth
-
-@angular/platform-browser
-MIT
-
-@angular/router
-MIT
-
-@angular/forms
-MIT
 
 @angular/fire/database
 MIT
