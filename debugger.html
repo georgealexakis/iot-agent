@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+	<title>MQTT Debugger - IoT Agent Live State Codes</title>
+	<link rel="icon" type="image/png" href="https://georgealexakis.github.io/iot-agent/assets/favicon.png">
+	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+		integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.js" type="text/javascript"></script>
+	<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+	<script type="text/javascript">
+		google.charts.load('current', { 'packages': ['corechart'] });
+		google.charts.setOnLoadCallback(initChart);
+		var mqtt;
+		var reconnectTimeout = 2000;
+		var host = "iot.eclipse.org"
+		var port = 80;
+		var temp = new Array();
+		var options = {
+			title: 'Real Time Error Codes',
+			vAxis: { minValue: 01 }
+		};
+
+		function onFailure(message) {
+			var connection = "Connection Attempt to Host " + host + "Failed.";
+			document.getElementById("console").innerHTML = connection;
+			setTimeout(MQTTconnect, reconnectTimeout);
+		}
+		function onMessageArrived(msg) {
+			var date = new Date();
+			var receivedMessage = msg.payloadString + " at " + date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds();
+			temp.push({ time: date, error: Number(msg.payloadString) });
+			document.getElementById("values").innerHTML = receivedMessage;
+			temp = arrayCleaner(temp);
+			console.log(temp);
+			var chartData = [
+				['Time', 'Error'],
+				[temp[temp.length - 10].time, temp[temp.length - 10].error],
+				[temp[temp.length - 9].time, temp[temp.length - 9].error],
+				[temp[temp.length - 8].time, temp[temp.length - 8].error],
+				[temp[temp.length - 7].time, temp[temp.length - 7].error],
+				[temp[temp.length - 6].time, temp[temp.length - 6].error],
+				[temp[temp.length - 5].time, temp[temp.length - 5].error],
+				[temp[temp.length - 4].time, temp[temp.length - 4].error],
+				[temp[temp.length - 3].time, temp[temp.length - 3].error],
+				[temp[temp.length - 2].time, temp[temp.length - 2].error],
+				[temp[temp.length - 1].time, temp[temp.length - 1].error]
+			];
+			drawChart(chartData);
+		}
+		function onConnect() {
+			var subscribeTopic = document.getElementById("subscribeTopic").value;
+			document.getElementById("console").innerHTML = "Connected.";
+			mqtt.subscribe(subscribeTopic);
+		}
+		function publishMessage() {
+			var publishTopic = document.getElementById("publishTopic").value;
+			var publishMessage = document.getElementById("message").value;
+			message = new Paho.MQTT.Message(publishMessage);
+			message.destinationName = publishTopic;
+			mqtt.send(message);
+		}
+		function MQTTconnect() {
+			var connection = "Connecting to " + host + " " + port + ".";
+			document.getElementById("console").innerHTML = connection;
+			mqtt = new Paho.MQTT.Client(host, port, "clientjs");
+			var options = {
+				timeout: 3,
+				onSuccess: onConnect,
+				onFailure: onFailure,
+			};
+			mqtt.onMessageArrived = onMessageArrived
+			mqtt.connect(options);
+		}
+		function drawChart(chartData) {
+			var data = google.visualization.arrayToDataTable(chartData);
+			var chart = new google.visualization.AreaChart(document.getElementById('error-chart'));
+			chart.draw(data, options);
+		}
+		function initChart() {
+			for (var i = 0; i < 10; i++) {
+				temp.push({ time: new Date(), error: 0 });
+			}
+			var chartData = [
+				['Time', 'Error'],
+				[0, 0],
+				[1, 0],
+				[2, 0],
+				[3, 0],
+				[4, 0],
+				[5, 0],
+				[6, 0],
+				[7, 0],
+				[8, 0],
+				[9, 0],
+			];
+			var data = google.visualization.arrayToDataTable(chartData);
+			var chart = new google.visualization.AreaChart(document.getElementById('error-chart'));
+			chart.draw(data, options);
+		}
+		function arrayCleaner(array) {
+			if (array.length > 10) {
+				var temp = new Array();
+				for (var i = 0; i < 10; i++) {
+					temp.push(array[(array.length - 10) + i]);
+				}
+				return temp;
+			} else {
+				return array;
+			}
+		}
+		function refresh() {
+			temp = new Array();
+			for (var i = 0; i < 10; i++) {
+				temp.push({ time: new Date(), error: 0 });
+			}
+			initChart();
+		}
+	</script>
+</head>
+
+<body>
+	<main role="main" class="flex-shrink-0">
+		<div class="container">
+			<div class="row">
+				<h1 class="mt-5">MQTT Debugger - IoT Agent Live State Codes</h1>
+			</div>
+			<div class="row">
+				<div class="col-sm">
+					<p>
+						<b>Host (MQTT over WebSockets):</b>
+						<script type="text/javascript">document.write(host)</script>
+						<br>
+						<b>Port:</b>
+						<script type="text/javascript">document.write(port)</script>
+						<br>
+						<b>Subscribe Topic:</b>
+						<input type="text" id="subscribeTopic" value="$2-IoT-Agent-2$" placeholder="Subscribe Topic">
+						<br>
+						<b>Publish Topic:</b>
+						<input type="text" id="publishTopic" value="$1-IoT-Agent-1$" placeholder="Publish Topic">
+						<br>
+						<b>Status:</b>
+						<span id="console"></span>
+						<br>
+						<b>Received Error:</b>
+						<span id="values"></span>
+					</p>
+					<button type="button" class="btn btn-secondary" onclick="MQTTconnect()">Connect to Broker</button>
+				</div>
+				<div class="col-sm">
+					<table class="table table-bordered table-sm">
+						<thead>
+							<tr>
+								<th scope="col">Code</th>
+								<th scope="col">Error</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr>
+								<th scope="row">01</th>
+								<td>T&H Microcontroller Boot OK</td>
+							</tr>
+							<tr>
+								<th scope="row">02</th>
+								<td>DHT Error</td>
+							</tr>
+							<tr>
+								<th scope="row">03</th>
+								<td>Update Temperature Error</td>
+							</tr>
+							<tr>
+								<th scope="row">04</th>
+								<td>Update Humidity Error</td>
+							</tr>
+							<tr>
+								<th scope="row">11</th>
+								<td>Lights Microcontroller Boot OK</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+				<div class="col-sm">
+					<div class="form-group">
+						<label for="message">Send message to publish topic</label>
+						<input type="text" class="form-control" id="message" placeholder="Message">
+						<br>
+						<button type="button" class="btn btn-secondary" onclick="publishMessage()">Send
+							Message</button>
+					</div>
+					<button type="button" class="btn btn-secondary" onclick="refresh()">Refresh Data</button>
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-sm">
+					<div id="error-chart" style="height: 500px"></div>
+				</div>
+			</div>
+		</div>
+	</main>
+	<footer class="footer mt-auto py-3" style="background-color: lightgray;">
+		<div class="container">
+			<span class="text-muted">MQTT Debugger - IoT Agent Live State Codes</span>
+		</div>
+	</footer>
+</body>
+
+</html>
