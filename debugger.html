@@ -6,34 +6,75 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 	<title>MQTT Debugger - IoT Agent Live State Codes</title>
 	<link rel="icon" type="image/png" href="https://georgealexakis.github.io/iot-agent/assets/favicon.png">
-	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
-		integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+		integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous">
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"
 		type="text/javascript"></script>
 	<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 	<script type="text/javascript">
+		// Initial values
 		google.charts.load('current', { 'packages': ['corechart'] });
 		google.charts.setOnLoadCallback(initChart);
 		var mqtt;
 		var reconnectTimeout = 2000;
-		var host = "iot.eclipse.org"
+		var host = "mqtt.eclipse.org"
 		var port = 443;
+		var ssl = true;
+		var subscribeTopic = "$1-IoT-Agent-1$";
+		var publishTopic = "$2-IoT-Agent-2$";
 		var temp = new Array();
 		var options = {
 			title: 'Real Time Error Codes',
 			vAxis: { minValue: 01 }
 		};
-
+		// On reseize
+		window.onresize = redrawChart;
+		function redrawChart() {
+			var chartData = [
+				['Time', 'Error'],
+				[0, 0],
+				[1, 0],
+				[2, 0],
+				[3, 0],
+				[4, 0],
+				[5, 0],
+				[6, 0],
+				[7, 0],
+				[8, 0],
+				[9, 0],
+			];
+			drawChart(chartData);
+		}
+		// Change SSL value
+		function changeSSL() {
+			var checkBox = document.getElementById("sslInput");
+			if (checkBox.checked == true) {
+				ssl = true;
+			} else {
+				ssl = false;
+			}
+		}
+		// Update checkbox of SSL value
+		function setSSL() {
+			if (ssl == false) {
+				document.getElementById("sslInput").checked = false;
+			} else {
+				document.getElementById("sslInput").checked = true;
+			}
+		}
+		// MQTT connecion on failure
 		function onFailure(message) {
+			host = document.getElementById("hostInput").value;
 			var connection = "Connection Attempt to Host " + host + "Failed.";
 			document.getElementById("console").innerHTML = connection;
 			setTimeout(MQTTconnect, reconnectTimeout);
 		}
+		// MQTT connecion on message arrived
 		function onMessageArrived(msg) {
 			var date = new Date();
 			var receivedMessage = msg.payloadString + " at " + date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds();
 			temp.push({ time: date, error: Number(msg.payloadString) });
-			document.getElementById("values").innerHTML = receivedMessage;
+			document.getElementById("values").value = receivedMessage;
 			temp = arrayCleaner(temp);
 			console.log(temp);
 			var chartData = [
@@ -51,11 +92,13 @@
 			];
 			drawChart(chartData);
 		}
+		// MQTT connecion on connect
 		function onConnect() {
 			var subscribeTopic = document.getElementById("subscribeTopic").value;
-			document.getElementById("console").innerHTML = "Connected.";
+			document.getElementById("console").value = "Connected.";
 			mqtt.subscribe(subscribeTopic);
 		}
+		// MQTT connecion on publish message
 		function publishMessage() {
 			var publishTopic = document.getElementById("publishTopic").value;
 			var publishMessage = document.getElementById("message").value;
@@ -63,12 +106,15 @@
 			message.destinationName = publishTopic;
 			mqtt.send(message);
 		}
+		// MQTT initialize connection
 		function MQTTconnect() {
+			host = document.getElementById("hostInput").value;
+			port = document.getElementById("portInput").value;
 			var connection = "Connecting to " + host + " " + port + ".";
-			document.getElementById("console").innerHTML = connection;
-			mqtt = new Paho.MQTT.Client(host, port, "IoT-Agent-Debugger");
+			document.getElementById("console").value = connection;
+			mqtt = new Paho.MQTT.Client(host.trim(), parseInt(port.trim()), "IoT-Agent-Debugger");
 			var options = {
-				useSSL: true,
+				useSSL: ssl,
 				timeout: 3,
 				onSuccess: onConnect,
 				onFailure: onFailure,
@@ -76,11 +122,13 @@
 			mqtt.onMessageArrived = onMessageArrived
 			mqtt.connect(options);
 		}
+		// Draw chart with the data
 		function drawChart(chartData) {
 			var data = google.visualization.arrayToDataTable(chartData);
 			var chart = new google.visualization.AreaChart(document.getElementById('error-chart'));
 			chart.draw(data, options);
 		}
+		// Initialize chart
 		function initChart() {
 			for (var i = 0; i < 10; i++) {
 				temp.push({ time: new Date(), error: 0 });
@@ -102,6 +150,7 @@
 			var chart = new google.visualization.AreaChart(document.getElementById('error-chart'));
 			chart.draw(data, options);
 		}
+		// Clean array from unnecessary data
 		function arrayCleaner(array) {
 			if (array.length > 10) {
 				var temp = new Array();
@@ -113,6 +162,7 @@
 				return array;
 			}
 		}
+		// Refresh chart
 		function refresh() {
 			temp = new Array();
 			for (var i = 0; i < 10; i++) {
@@ -120,37 +170,115 @@
 			}
 			initChart();
 		}
+		// Reload Connection
+		function reload() {
+			location.reload();
+		}
 	</script>
+	<style>
+		.form-group {
+			margin-bottom: 0.1rem !important;
+		}
+
+		.my-footer {
+			background-color: lightgray !important;
+		}
+
+		nav {
+			margin-bottom: 1rem;
+		}
+
+		.form-check-input {
+			margin-top: 0 !important;
+		}
+	</style>
 </head>
 
 <body>
 	<main role="main" class="flex-shrink-0">
+		<nav class="navbar navbar-light bg-light">
+			<a class="navbar-brand" href="#">
+				<img src="https://georgealexakis.github.io/iot-agent/assets/favicon.png" width="30" height="30"
+					class="d-inline-block align-top" alt="Logo">
+				MQTT Debugger - IoT Agent Live State Codes
+			</a>
+		</nav>
 		<div class="container">
 			<div class="row">
-				<h1 class="mt-5">MQTT Debugger - IoT Agent Live State Codes</h1>
-			</div>
-			<div class="row">
 				<div class="col-sm">
-					<p>
-						<b>Host (MQTT over WebSockets):</b>
-						<script type="text/javascript">document.write(host)</script>
-						<br>
-						<b>Port:</b>
-						<script type="text/javascript">document.write(port)</script>
-						<br>
-						<b>Subscribe Topic:</b>
-						<input type="text" id="subscribeTopic" value="$2-IoT-Agent-2$" placeholder="Subscribe Topic">
-						<br>
-						<b>Publish Topic:</b>
-						<input type="text" id="publishTopic" value="$1-IoT-Agent-1$" placeholder="Publish Topic">
-						<br>
-						<b>Status:</b>
-						<span id="console"></span>
-						<br>
-						<b>Received Error:</b>
-						<span id="values"></span>
-					</p>
-					<button type="button" class="btn btn-secondary" onclick="MQTTconnect()">Connect to Broker</button>
+					<form>
+						<div class="form-group row">
+							<label for="hostInput" class="col-sm-2 col-form-label col-form-label-sm">Host</label>
+							<div class="col-sm-10">
+								<input type="text" class="form-control form-control-sm" id="hostInput"
+									placeholder="MQTT over WebSockets">
+							</div>
+						</div>
+						<div class="form-group row">
+							<div class="col-2">
+								<label for="portInput" class="col-form-label col-form-label-sm">Port</label>
+							</div>
+							<div class="col-4">
+								<input type="text" class="form-control form-control-sm" id="portInput"
+									placeholder="Port">
+							</div>
+							<div class="col-2">
+								<label for="sslInput" class="col-form-label col-form-label-sm">SSL</label>
+							</div>
+							<div class="col-1">
+								<input type="checkbox" class="form-check-input form-control-sm" id="sslInput"
+									onclick="changeSSL()">
+							</div>
+						</div>
+						<div class="form-group row">
+							<label for="subscribeTopic" class="col-sm-4 col-form-label col-form-label-sm">Subscribe
+								Topic</label>
+							<div class="col-sm-8">
+								<input type="text" class="form-control form-control-sm" id="subscribeTopic"
+									placeholder="Subscribe Topic">
+							</div>
+						</div>
+						<div class="form-group row">
+							<label for="subscribeTopic" class="col-sm-4 col-form-label col-form-label-sm">Publish
+								Topic</label>
+							<div class="col-sm-8">
+								<input type="text" class="form-control form-control-sm" id="publishTopic"
+									placeholder="Publish Topic">
+							</div>
+						</div>
+						<div class="form-group row">
+							<label for="console" class="col-sm-4 col-form-label col-form-label-sm">Status</label>
+							<div class="col-sm-8">
+								<textarea type="text" readonly class="form-control-plaintext form-control-sm"
+									id="console" placeholder="waiting..." rows="3"></textarea>
+							</div>
+						</div>
+						<div class="form-group row">
+							<label for="values" class="col-sm-4 col-form-label col-form-label-sm">Error</label>
+							<div class="col-sm-8">
+								<textarea type="text" readonly class="form-control-plaintext form-control-sm"
+									id="values" placeholder="waiting..." rows="3"></textarea>
+							</div>
+						</div>
+						<div class="row text-center">
+							<div class="col">
+								<button type="button" class="btn btn-secondary btn-sm" onclick="MQTTconnect()">Connect
+									to
+									Broker</button>
+							</div>
+							<div class="col">
+								<button type="button" class="btn btn-secondary btn-sm" onclick="reload()">Reload
+									Connection</button>
+							</div>
+						</div>
+						<script>
+							document.getElementById("hostInput").value = host;
+							document.getElementById("portInput").value = port;
+							document.getElementById("subscribeTopic").value = subscribeTopic;
+							document.getElementById("publishTopic").value = publishTopic;
+							setSSL();
+						</script>
+					</form>
 				</div>
 				<div class="col-sm">
 					<table class="table table-bordered table-sm">
@@ -163,36 +291,46 @@
 						<tbody>
 							<tr>
 								<th scope="row">01</th>
-								<td>T&H Microcontroller Boot OK</td>
+								<td><small>T&H Microcontroller Boot OK</small></td>
 							</tr>
 							<tr>
 								<th scope="row">02</th>
-								<td>DHT Error</td>
+								<td><small>DHT Error</small></td>
 							</tr>
 							<tr>
 								<th scope="row">03</th>
-								<td>Update Temperature Error</td>
+								<td><small>Update Temperature Error</small></td>
 							</tr>
 							<tr>
 								<th scope="row">04</th>
-								<td>Update Humidity Error</td>
+								<td><small>Update Humidity Error</small></td>
 							</tr>
 							<tr>
 								<th scope="row">11</th>
-								<td>Lights Microcontroller Boot OK</td>
+								<td><small>Lights Microcontroller Boot OK</small></td>
 							</tr>
 						</tbody>
 					</table>
 				</div>
 				<div class="col-sm">
+					<h5>Useful Links</h5>
+					<a class="btn btn-secondary btn-sm"
+						href="https://github.com/mqtt/mqtt.github.io/wiki/public_brokers" role="button"
+						target="_blank">Free
+						MQTT Brokers</a>
+					<a class="btn btn-secondary btn-sm" href="https://georgealexakis.github.io/iot-agent/" role="button"
+						target="_blank">IoT Agent</a>
+					<a class="btn btn-secondary btn-sm" href="https://github.com/georgealexakis/mqtt-debugger"
+						role="button" target="_blank">Git Repository</a>
+					<hr>
 					<div class="form-group">
-						<label for="message">Send message to publish topic</label>
-						<input type="text" class="form-control" id="message" placeholder="Message">
-						<br>
-						<button type="button" class="btn btn-secondary" onclick="publishMessage()">Send
-							Message</button>
+						<label for="message" class="col-form-label col-form-label-sm">Send message to publish
+							topic</label>
+						<input type="text" class="form-control form-control-sm" id="message" placeholder="Message">
 					</div>
-					<button type="button" class="btn btn-secondary" onclick="refresh()">Refresh Data</button>
+					<button type="button" class="btn btn-secondary btn-sm" onclick="publishMessage()">Send
+						Message</button>
+					<button type="button" class="btn btn-secondary btn-sm" onclick="refresh()">Refresh Data</button>
 				</div>
 			</div>
 			<div class="row">
@@ -202,7 +340,7 @@
 			</div>
 		</div>
 	</main>
-	<footer class="footer mt-auto py-3" style="background-color: lightgray;">
+	<footer class="footer mt-auto py-3 my-footer">
 		<div class="container">
 			<span class="text-muted">MQTT Debugger - IoT Agent Live State Codes</span>
 		</div>
